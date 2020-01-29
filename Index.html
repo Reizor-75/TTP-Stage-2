@@ -1,0 +1,198 @@
+<!DOCTYP html>
+
+<html lang="en">
+	<head>
+	  <!-- Insert these scripts at the bottom of the HTML, but before you use any Firebase services -->
+
+	  <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-app.js"></script>
+
+	  <!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-analytics.js"></script>
+
+	  <!-- Add Firebase products that you want to use -->
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-auth.js"></script>
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-firestore.js"></script>
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-database.js"></script>
+	  
+	<!-- TODO: Add SDKs for Firebase products that you want to use
+		 https://firebase.google.com/docs/web/setup#available-libraries
+	<script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-analytics.js"></script>  -->
+
+	<script>
+		
+	</script>
+	<link rel="stylesheet" href='style.css'>
+
+	<title>Stocks Signin</title>
+	</head>
+
+	<body>
+		<div id="fullpage">
+			<div id="leftTemp">
+				<h1>Login</h1>
+				<form id="loginform">
+					<input type="text" id="loginEmail" placeholder="Email"><br>
+					<input type="password" id="loginPassword" placeholder="Password"><br>
+					<button id="loginButton">Log In</button>
+
+				</form>
+			</div>
+			
+			<div id="rightTemp">
+				<h1> Register</h1>
+				<form action = "">
+					<input type="text" id="firstName" placeholder="First Name"><br>
+					<input type="text" id="lastName" placeholder="Last Name"><br>
+					<input type="text" id="registerEmail"placeholder="Email" ><br>
+					<input type="password" id="registerPassword" placeholder="Password"><br>					
+					<button id="registerButton">Register</button>
+
+				</form>
+			</div>
+		</div>
+		
+		<script>
+		/* used firebase to create/store user creditails onto a database*/
+		
+		// Your web app's Firebase configuration
+		const firebaseConfig = {
+			apiKey: "AIzaSyDLK0wxZHy6BFuZmcuVYihpGOXQA1M43tE",
+			authDomain: "stage2tester-5eb5d.firebaseapp.com",
+			databaseURL: "https://stage2tester-5eb5d.firebaseio.com",
+			projectId: "stage2tester-5eb5d",
+			storageBucket: "stage2tester-5eb5d.appspot.com",
+			messagingSenderId: "796193894609",
+			appId: "1:796193894609:web:a10862789573d824a855f0",
+			measurementId: "G-XM2WDV7KVN"
+		  };
+		// Initialize Firebase
+		firebase.initializeApp(firebaseConfig);
+		//firebase.analytics();
+		
+		//load database
+		const database = firebase.database();
+		const ref = database.ref('users');
+		
+		//active inputs
+		let curInputs;	
+		
+		//check the login creditails when users attempts to login 
+		function checkValidCred(){
+			ref.once('value').then(function(snapshot){
+				var username = snapshot.val();
+				var keys = Object.keys(username);
+				var accountExist = false;			
+				var k;
+				for(var i = 0;i <keys.length;i++){
+					k = keys[i];
+
+					if(username[k].Email == curInputs.Email&&username[k].Password == curInputs.Password)accountExist = true;
+				}
+				
+				if(!accountExist)alert("Incorrect Email or Password");
+				else{
+					//proceed to next page
+					localStorage.setItem('userID', username[k].userID);
+					window.document.location = 'Portfolio.html';
+				}
+			});
+		}
+	
+		function checkValidAccount(){
+			ref.once('value').then(function(snapshot){
+		
+				var username = snapshot.val();
+				var keys = Object.keys(username);
+				var accountExist = false;			
+				var k;
+				for(var i = 0;i <keys.length;i++){
+					k = keys[i];
+					if(username[k].Email == curInputs.Email){
+						accountExist = true;
+						break;
+					}
+					if(username[k].userID == curInputs.userID) curInputs.userID= Math.floor((Math.random() * 99999) + 1);
+				}
+	
+				if(accountExist)alert("Account already exist");
+				else{
+					ref.push(curInputs);					
+					userID = curInputs.userID;
+					
+					//funds set to 5000 for testing
+					var funds = 5000;
+					
+					//create database for stocks own
+					ref = database.ref('stockList'+userID);
+					ref.push({funds});
+					
+					//create database for transactions
+					ref = database.ref('Transactions'+userID);
+					ref.push({userID});
+					
+					localStorage.setItem('userID', username[k].userID);
+					window.document.location = 'Portfolio.html';
+					
+				}
+			});
+		}
+		/*function to sign in
+			will check if creditails exist in database(stored on firebase)
+			
+			if the above is correct, this will leave to the users portfolio
+			if incorrect, error message will appear and will reload signin page
+		*/
+		function checkLogin(event){
+			event.preventDefault();
+						
+			//retrieve user's credentials from input boxes to be put into database
+			var Email = document.getElementById('loginEmail').value,
+				Password = document.getElementById('loginPassword').value
+				
+			curInputs ={ Email, Password};		
+			checkValidCred();
+		}
+		 
+		/*function to create new account
+			will check if email already exist in database(stored on firebase)
+			
+			if it does not, an email will be sent to verify email and new account will be created
+			if it does, error message will appear and reload sign in page			
+		*/
+		function checkRegistration(event){
+			event.preventDefault();		
+			//retrieve user's credentials from input boxes to be put into database
+			var Email = document.getElementById('registerEmail').value,			
+				Password = document.getElementById('registerPassword').value,
+				FirstName = document.getElementById('firstName').value,
+				LastName = document.getElementById('lastName').value
+				
+			//check if all inpuits were filled in
+			if(Email =="" ||Password ==""|FirstName ==""||LastName =="") alert("Fill in all inputs");
+			else{
+				//checks if there is a valid email address (sorta)
+				if(!Email.includes("@"))alert("NOT VALID EMAIL ADDRESS");
+				else {			
+					var userID = 0;	
+					curInputs ={Email, Password,FirstName,LastName,userID};	
+					//CHECK IF EMAIL ALREADY EXIST ON DATABASE
+					checkValidAccount();
+
+				}
+			}			
+
+		}
+		
+		//EVENT LISTENER activated when either button is pressed and calls on corresponding function
+		document.addEventListener('DOMContentLoaded',()=>{
+			document.getElementById('loginButton').addEventListener('click', checkLogin);
+		});
+		document.addEventListener('DOMContentLoaded',()=>{
+			document.getElementById('registerButton').addEventListener('click', checkRegistration);
+		});
+	
+		</script>
+		
+	</body>
+</html>

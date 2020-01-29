@@ -1,0 +1,129 @@
+<!DOCTYP html>
+
+<html lang="en">
+	<head>
+	  <!-- Insert these scripts at the bottom of the HTML, but before you use any Firebase services -->
+
+	  <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-app.js"></script>
+
+	  <!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-analytics.js"></script>
+
+	  <!-- Add Firebase products that you want to use -->
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-auth.js"></script>
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-firestore.js"></script>
+	  <script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-database.js"></script>
+
+	<link rel="stylesheet" href='style.css'>
+
+	<title>Transactions</title>
+	</head>
+
+	<body>	
+		<div class="NavBar">		
+			<a href="Portfolio.html">Portfolio</a>
+			<a href="Transactions.html">Transactions</a>	
+		</div>
+		<div id="fullpage">
+			<h1>Transactions</h1>
+			<table id="transList">
+		  <tr>
+			<th>Date</th>
+			<th>Name</th>
+			<th>Quantity</th>
+			<th>Bought or Sold</th>
+			<th>value</th>
+		  </tr>
+			</table>
+			
+			<p id="noTrans"></p>
+		</div>
+		
+		<script>
+			// Your web app's Firebase configuration
+			var firebaseConfig = {
+				apiKey: "AIzaSyDLK0wxZHy6BFuZmcuVYihpGOXQA1M43tE",
+				authDomain: "stage2tester-5eb5d.firebaseapp.com",
+				databaseURL: "https://stage2tester-5eb5d.firebaseio.com",
+				projectId: "stage2tester-5eb5d",
+				storageBucket: "stage2tester-5eb5d.appspot.com",
+				messagingSenderId: "796193894609",
+				appId: "1:796193894609:web:a10862789573d824a855f0",
+				measurementId: "G-XM2WDV7KVN"
+			  };
+			// Initialize Firebase
+			firebase.initializeApp(firebaseConfig);
+			//firebase.analytics();
+			
+			//orrect folder location of the database with userID and key words
+			const userID='Transactions'+ localStorage.getItem('userID');
+			
+			//load database (what the user owns)
+			const database = firebase.database();
+			const ref = database.ref(userID);
+			
+			/*retrieves data from Transactions database
+				loads all transactions listed on database into a array and 
+				creates a table and fills table with corresponding amounts
+			*/
+			function getData(data){
+				//var entries = data.val();					
+				//var index = Object.keys(entries);
+				var curEntry = [];
+				
+				//gets the list of transactions and puts them into an array
+				data.forEach( function (child){
+					curEntry.push(child.val());
+					/*child.forEach( function (entry)
+					{	curEntry.push(entry.val());});*/
+					
+				});
+				
+				//checks if there are any transactions on database
+				if(curEntry.length == 0)noTrans.innerHTML = 'No transactions have been made';
+
+				//gets data from a single purchase
+				//creates each row on the table with said data
+				for(var i = 0; i < curEntry.length;i++){
+					console.log(curEntry[i]);
+	
+					//retrieving data
+					var date = curEntry[i].date;
+					
+					var tickerName = curEntry[i].tickerName;
+					var qty = curEntry[i].qty;
+					var bOS = curEntry[i].bOS;
+					var purchasePrice = curEntry[i].purchasePrice;
+
+					//makeing row in the table
+					var tr = document.getElementById("transList");
+					var row = tr.insertRow(1);
+					var cell1 = row.insertCell(0);
+					cell1.innerHTML = date;
+					
+					var cell2 = row.insertCell(1);
+					cell2.innerHTML = tickerName;
+					
+					var cell3 = row.insertCell(2);
+					cell3.innerHTML = qty;
+					
+					var cell4 = row.insertCell(3);
+					cell4.innerHTML = bOS;
+					
+					var cell5 = row.insertCell(4);
+					cell5.innerHTML = '$'+purchasePrice;
+				}
+			}
+			
+			function errData(err){
+				console.log(err);
+			}
+			
+			//loads the  transactions list
+			ref.on('value', getData, errData);
+			
+		</script>
+		
+	</body>
+</html>

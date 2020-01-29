@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+		<script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-app.js"></script>
+
+		<!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+		<script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-analytics.js"></script>
+
+		<!-- Add Firebase products that you want to use -->
+		<script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-auth.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-firestore.js"></script>
+		<script src="https://www.gstatic.com/firebasejs/7.7.0/firebase-database.js"></script>
+
+		<link rel="stylesheet" type="text/css" href="style.css">
+		<title>Stock Portfolio</title>
+	</head>
+  
+	<body>
+  	<div class="fullPage">	
+		<div class="NavBar">		
+			<a href="Portfolio.html">Portfolio</a>
+			<a href="Transactions.html">Transactions</a>	
+		</div>
+		
+		<div class="port">
+			<h1>Portfolio</h1>
+			
+			<!-- user Stovck portfolio-->
+			<div id="leftTemp">
+				<h2>Net value: $<span id = "netPort"></span></h2>
+				  <table id="stockList">
+					  <tr>
+						<th>Name</th>
+						<th>Quantity</th>
+						<th>Current Value</th>
+					  </tr>
+				  </table>
+				<p id="noStocks"></p>
+			</div>
+			
+			<!-- Purchase area -->
+			<div id="rightTemp">
+				<h2>Funds Available: $<span id = "userFunds"></span></h2>
+				<form > <!--action = "purchase.html">-->
+					<input type="text" id="tickerName" placeholder="Ticker Name"><br>
+					<input type="number" id="qty" placeholder="Quantity" ><br>
+					<Button id="purchaseButton">Purchase Stock</button>
+
+				</form>
+			</div>
+		</div>
+	</div>
+	</body>
+	<script>
+		// Your web app's Firebase configuration
+		var firebaseConfig = {
+			apiKey: "AIzaSyDLK0wxZHy6BFuZmcuVYihpGOXQA1M43tE",
+			authDomain: "stage2tester-5eb5d.firebaseapp.com",
+			databaseURL: "https://stage2tester-5eb5d.firebaseio.com",
+			projectId: "stage2tester-5eb5d",
+			storageBucket: "stage2tester-5eb5d.appspot.com",
+			messagingSenderId: "796193894609",
+			appId: "1:796193894609:web:a10862789573d824a855f0",
+			measurementId: "G-XM2WDV7KVN"
+		  };
+		// Initialize Firebase
+		firebase.initializeApp(firebaseConfig);
+		//firebase.analytics();
+		
+		const userID=localStorage.getItem('userID');
+		
+		//load database (what the user owns)
+		const database = firebase.database();
+		const refStocks = database.ref('stockList'+userID);		
+		const refTrans = database.ref('Transactions'+userID);
+		
+		let fundsAvail = 0;
+		let netAvil = 0;
+		let newPurchase;
+		
+		//retrieve updated info of user's stocks from IEX API
+				
+		/*retrieves data from Transactions database
+			loads all transactions listed on database into a array and 
+			creates a table and fills table with corresponding amounts
+		*/
+		async function loadData(data){
+			var curEntry = [];
+			//gets the list of transactions and puts them into an array
+			data.forEach( function (child){
+				curEntry.push(child.val());
+			});
+			
+			//load in the money
+			
+			fundsAvail = curEntry[0].funds;//.find(element => !isNaN(element));
+			userFunds.innerHTML = fundsAvail;
+			//checks if there are any stock on database
+			if(curEntry.length == 1){			
+				noStocks.innerHTML = 'You do not own any stocks';
+				netPort.innerHTML = 0;
+			}
+			//gets data from a single purchase
+			//creates each row on the table with said data
+			console.log(curEntry);
+			for(var i = 1; i < curEntry.length;i++){
+				var tickerName = curEntry[i].tickerName;
+				var qty = curEntry[i].qty;
+				
+				//retrieve stock lastest price
+				var url = "https://sandbox.iexapis.com/stable/stock/" + tickerName + '/quote/?token=Tpk_946ebfaf48164b9ab3667a07e2dca0ff';
+				var response = await fetch(url);
+				var data = await response.json();
+
+				var curValue =	data.latestPrice; 
+				console.log(curValue);
+				var openValue = data.open;
+				
+				//makeing row in the table
+				var tr = document.getElementById("stockList");
+				var row = tr.insertRow(1);
+				
+				var cell1 = row.insertCell(0);
+				cell1.innerHTML = tickerName;
+				
+				var cell2 = row.insertCell(1);
+				cell2.innerHTML = qty;
+				
+				var cell3 = row.insertCell(2);
+				//sets the current value of stock to corresponding
+				var str =  '$'+curValue;
+				
+				if(curValue > openValue) cell3.innerHTML = str.fontcolor("green");
+				else if(curValue < openValue) cell3.innerHTML = str.fontcolor("red");
+				else cell3.innerHTML = str.fontcolor("black");
+				
+				netPort += curValue;
+				
+			}
+		}
+		
+		function errData(err){
+			console.log(err);
+		}
+
+		/*retrieves data from Transactions database
+			loads all transactions listed on database into a array 
+			checks if ticker alread exist
+		*/
+		function checkExistTicker(){
+			var curEntry = [];
+			
+			var tickerExist = false;
+			//gets the list of transactions and puts them into an array
+			data.forEach( function (child){
+				child.forEach( function (entry)
+				{	curEntry.push(entry.val());});
+			});
+						
+			//checks if new purchase ticker is on database
+			//if yes, reset it with new quantity
+			for(var i = 0; i < curEntry.length-1;i++){
+				if(curEntry[i].tickerName == newPurchase.tickerName) {
+					var name = curEntry[i].tickerName;
+					var	qty =curEntry[i].qty+newPurchase.qty
+					
+					var updatedStock = {name, qty};
+					
+					refStocks.set(updatedStock);
+					break;
+				}
+			}
+			//addes ticker to database if ticker doesn't exist
+			if(!tickerExist)refStocks.push(newPurchase);
+		}
+		
+		/*
+			purchase event
+			gathers data inputted by user
+			checks if valid request (correct ticker and purchasing amounts
+				if yes update stock list & transactions
+		
+		*/
+		async function checkPurchase(event){
+			event.preventDefault();
+			//retrieve purchase data from input boxes to be put into database
+			var date = Date.now().toString(),					
+				tickerName = document.getElementById('tickerName').value,
+				qty = document.getElementById('qty').value
+				bOS = 'buy'
+			//parse date
+
+
+			//retrieve stock lastest price
+			var url = "https://sandbox.iexapis.com/stable/stock/" + tickerName + "/quote/?token=Tpk_946ebfaf48164b9ab3667a07e2dca0ff";
+			var response = await fetch(url);
+			var data = await response.json();
+
+			var purchasePrice = data.latestPrice*qty ;
+
+			var newTransaction;
+			//check if all inpuits were filled in
+			if(tickerName ==""||qty == "") alert("Fill in all inputs");
+			else{
+			
+				//checks if purchase can be made with the funds available
+				
+				if(purchasePrice> fundsAvail)alert("NOT ENOUGH AVAILABLE FUNDS");
+				else {	
+					//updates the transaction database
+					newTransaction ={date, tickerName, qty, bOS, purchasePrice};
+					refTrans.push(newTransaction);
+					
+					newPurchase = {tickerName, qty};
+					refStocks.push(newPurchase);
+					refStocks.on('value', loadData, errData);
+				}
+			}
+		}	
+		
+		//load stock data in from database (will but put on interval to updata stock)
+		refStocks.on('value', loadData, errData);
+		
+		//event listener for when the user enters a purchase
+		document.addEventListener('DOMContentLoaded',()=>{
+			document.getElementById('purchaseButton').addEventListener('click', checkPurchase);
+		});
+	</script>
+
+  <footer>
+	<a href="https://iexcloud.io">Data provided by IEX Cloud</a>
+  </footer>
+</html>
